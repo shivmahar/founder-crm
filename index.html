@@ -574,11 +574,11 @@
 
 </div>
 
-<!-- ADD CONTACT MODAL -->
+<!-- ADD / EDIT CONTACT MODAL -->
 <div class="overlay" id="modal-overlay" onclick="closeModalOnOverlay(event)">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">Add Contact</div>
+      <div class="modal-title" id="modal-title">Add Contact</div>
       <button class="close-btn" onclick="closeModal()">×</button>
     </div>
     <div class="form-row">
@@ -627,7 +627,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveContact()">Save Contact</button>
+      <button class="btn btn-primary" id="modal-save-btn" onclick="saveContact()">Save Contact</button>
     </div>
   </div>
 </div>
@@ -636,7 +636,10 @@
 <div class="detail-panel" id="detail-panel">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
     <span style="font-size:13px;font-weight:500;color:var(--muted);">Contact detail</span>
-    <button class="close-btn" onclick="closeDetail()">×</button>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-ghost" style="padding:5px 12px;font-size:12px;" onclick="window.editContact()">Edit</button>
+      <button class="close-btn" onclick="closeDetail()">×</button>
+    </div>
   </div>
   <div class="detail-avatar" id="d-avatar"></div>
   <div class="detail-name" id="d-name"></div>
@@ -672,6 +675,7 @@
   let contacts = [];
   let currentFilter = 'all';
   let currentDetailId = null;
+  let editingId = null;
 
   async function loadContacts() {
     const { data, error } = await db.from('contacts').select('*').order('created_at', { ascending: false });
@@ -765,15 +769,37 @@
   }
 
   function openModal() {
+    editingId = null;
+    document.getElementById('modal-title').textContent = 'Add Contact';
+    document.getElementById('modal-save-btn').textContent = 'Save Contact';
     document.getElementById('modal-overlay').classList.add('open');
     document.getElementById('f-last').value = new Date().toISOString().split('T')[0];
   }
 
   function closeModal() {
+    editingId = null;
     document.getElementById('modal-overlay').classList.remove('open');
     ['f-name','f-company','f-email','f-met','f-notes','f-last','f-next'].forEach(id => {
       document.getElementById(id).value = '';
     });
+    document.getElementById('f-type').selectedIndex = 0;
+  }
+
+  function editContact() {
+    const c = contacts.find(x => x.id === currentDetailId);
+    if (!c) return;
+    editingId = c.id;
+    document.getElementById('modal-title').textContent = 'Edit Contact';
+    document.getElementById('modal-save-btn').textContent = 'Update Contact';
+    document.getElementById('f-name').value = c.name || '';
+    document.getElementById('f-company').value = c.company || '';
+    document.getElementById('f-email').value = c.email || '';
+    document.getElementById('f-type').value = c.type || 'founder';
+    document.getElementById('f-met').value = c.met || '';
+    document.getElementById('f-notes').value = c.notes || '';
+    document.getElementById('f-last').value = c.last || '';
+    document.getElementById('f-next').value = c.next || '';
+    document.getElementById('modal-overlay').classList.add('open');
   }
 
   function closeModalOnOverlay(e) {
@@ -784,11 +810,12 @@
     const name = document.getElementById('f-name').value.trim();
     if (!name) { alert('Name is required'); return; }
 
-    const btn = document.querySelector('#modal-overlay .btn-primary');
+    const btn = document.getElementById('modal-save-btn');
+    const originalText = btn.textContent;
     btn.textContent = 'Saving...';
     btn.disabled = true;
 
-    const { error } = await db.from('contacts').insert({
+    const payload = {
       name,
       company: document.getElementById('f-company').value.trim() || null,
       email: document.getElementById('f-email').value.trim() || null,
@@ -797,14 +824,22 @@
       notes: document.getElementById('f-notes').value.trim() || null,
       last_contacted: document.getElementById('f-last').value || null,
       follow_up_by: document.getElementById('f-next').value || null,
-    });
+    };
 
-    btn.textContent = 'Save Contact';
+    let error;
+    if (editingId) {
+      ({ error } = await db.from('contacts').update(payload).eq('id', editingId));
+    } else {
+      ({ error } = await db.from('contacts').insert(payload));
+    }
+
+    btn.textContent = originalText;
     btn.disabled = false;
 
     if (error) { alert('Error saving: ' + error.message); return; }
     closeModal();
     await loadContacts();
+    if (editingId && currentDetailId === editingId) openDetail(editingId);
   }
 
   async function deleteContact(id) {
@@ -923,6 +958,7 @@
   window.draftFollowUp = draftFollowUp;
   window.doLogin = doLogin;
   window.doLogout = doLogout;
+  window.editContact = editContact;
 
   // init
   checkSession();
