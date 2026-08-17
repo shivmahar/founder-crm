@@ -702,7 +702,6 @@
 
   const SUPABASE_URL = 'https://rgqhispyzunahpyeweru.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJncWhpc3B5enVuYWhweWV3ZXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MjkwMTQsImV4cCI6MjEwMjUwNTAxNH0.vnWMxio4mwmgjb37Pwd39zAMyQD98fIiUC0Zk752L-c';
-  const GEMINI_KEY = 'AIzaSyAQ.Ab8RN6LZ-PkR4JgMk6RnWBoXHaTFYRrpT-MPncViH_Cc5Dx21Q';
   const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let contacts = [];
@@ -929,13 +928,13 @@ They are a ${c.type || 'contact'}.${c.met ? ' They met at: ' + c.met + '.' : ''}
 Keep it under 4 sentences. Casual and genuine, not salesy. No subject line. Just the message body.`;
 
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
+      const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        body: JSON.stringify({ prompt })
       });
       const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not generate message.';
+      const text = data?.text || 'Could not generate message.';
       document.getElementById('d-draft-text').textContent = text.trim();
     } catch(e) {
       document.getElementById('d-draft-text').textContent = 'Error generating message. Check your API key.';
