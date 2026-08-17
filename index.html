@@ -435,10 +435,79 @@
     .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
     .empty-state p { font-size: 14px; }
 
+    /* ─── MOBILE NAV ─── */
+    .mobile-bar {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 52px;
+      background: var(--accent);
+      z-index: 90;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+    }
+
+    .mobile-logo {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .mobile-logo span { color: var(--lime); }
+
+    .mobile-menu-btn {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 22px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+    }
+
+    .mobile-add-btn {
+      background: var(--lime);
+      border: none;
+      color: var(--accent);
+      font-size: 20px;
+      font-weight: 700;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 95;
+    }
+
+    .sidebar-overlay.open { display: block; }
+
     @media (max-width: 768px) {
-      .sidebar { display: none; }
-      .main { padding: 16px; }
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        width: 240px;
+      }
+      .sidebar.open { transform: translateX(0); }
+      .mobile-bar { display: flex; }
+      .main { padding: 16px; padding-top: 68px; }
       .detail-panel { width: 100%; }
+      .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .page-header .btn { display: none; }
     }
 
     /* ─── LOGIN ─── */
@@ -514,6 +583,54 @@
     }
 
     .login-toggle a:hover { text-decoration: underline; }
+
+    /* ─── FOLLOW-UPS ─── */
+    .fu-section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin: 24px 0 10px;
+      color: var(--muted);
+    }
+    .fu-label-red { color: var(--red); }
+    .fu-label-amber { color: var(--amber); }
+    .fu-label-green { color: #1B4332; }
+
+    .fu-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: box-shadow 0.15s;
+    }
+    .fu-card:hover { box-shadow: 0 2px 12px rgba(17,17,17,0.07); }
+    .fu-card .fu-avatar {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600; color: #fff;
+      flex-shrink: 0;
+    }
+    .fu-card .fu-info { flex: 1; min-width: 0; }
+    .fu-card .fu-name { font-weight: 600; font-size: 14px; }
+    .fu-card .fu-company { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .fu-card .fu-badge {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 3px 9px;
+      border-radius: 20px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .fu-badge-red { background: rgba(220,38,38,0.1); color: var(--red); }
+    .fu-badge-amber { background: rgba(217,119,6,0.1); color: var(--amber); }
+    .fu-badge-green { background: rgba(27,67,50,0.1); color: var(--green); }
   </style>
 </head>
 <body>
@@ -543,14 +660,22 @@
 
 <div class="app" id="main-app" style="display:none;">
 
+  <!-- MOBILE TOP BAR -->
+  <div class="mobile-bar">
+    <button class="mobile-menu-btn" onclick="window.toggleSidebar()">☰</button>
+    <div class="mobile-logo">Founder <span>CRM</span></div>
+    <button class="mobile-add-btn" onclick="window.openModal()">+</button>
+  </div>
+
+  <!-- SIDEBAR OVERLAY -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="window.toggleSidebar()"></div>
+
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="logo">Founder <span>CRM</span></div>
     <nav>
-      <div class="nav-item active"><span class="nav-icon">👥</span> Contacts</div>
-      <div class="nav-item"><span class="nav-icon">📅</span> Follow-ups</div>
-      <div class="nav-item"><span class="nav-icon">🏢</span> Companies</div>
-      <div class="nav-item"><span class="nav-icon">📝</span> Notes</div>
+      <div class="nav-item active" id="nav-contacts" onclick="window.showTab('contacts')"><span class="nav-icon">👥</span> Contacts</div>
+      <div class="nav-item" id="nav-followups" onclick="window.showTab('followups')"><span class="nav-icon">📅</span> Follow-ups</div>
     </nav>
     <div class="sidebar-bottom">
       <div class="stats-pill">
@@ -563,45 +688,76 @@
 
   <!-- MAIN -->
   <main class="main">
-    <div class="page-header">
-      <div>
-        <div class="page-title">Contacts</div>
-        <div class="page-sub">Track everyone that matters to your journey</div>
+
+    <!-- CONTACTS TAB -->
+    <div id="tab-contacts">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Contacts</div>
+          <div class="page-sub">Track everyone that matters to your journey</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal()">+ Add Contact</button>
       </div>
-      <button class="btn btn-primary" onclick="openModal()">+ Add Contact</button>
+
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" placeholder="Search contacts..." oninput="filterContacts()" />
+        </div>
+        <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+        <button class="filter-btn" onclick="setFilter('investor', this)">Investors</button>
+        <button class="filter-btn" onclick="setFilter('founder', this)">Founders</button>
+        <button class="filter-btn" onclick="setFilter('customer', this)">Customers</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Last Contact</th>
+              <th>Next Action</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="contacts-table">
+          </tbody>
+        </table>
+        <div id="empty-state" class="empty-state">
+          <div class="icon">👋</div>
+          <p>No contacts yet — add someone you met recently.</p>
+        </div>
+      </div>
     </div>
 
-    <div class="toolbar">
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="search-input" placeholder="Search contacts..." oninput="filterContacts()" />
+    <!-- FOLLOW-UPS TAB -->
+    <div id="tab-followups" style="display:none;">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Follow-ups</div>
+          <div class="page-sub">People you need to reach out to</div>
+        </div>
       </div>
-      <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
-      <button class="filter-btn" onclick="setFilter('investor', this)">Investors</button>
-      <button class="filter-btn" onclick="setFilter('founder', this)">Founders</button>
-      <button class="filter-btn" onclick="setFilter('customer', this)">Customers</button>
+      <div id="followups-overdue-section">
+        <div class="fu-section-label fu-label-red">🔴 Overdue</div>
+        <div id="followups-overdue"></div>
+      </div>
+      <div id="followups-soon-section">
+        <div class="fu-section-label fu-label-amber">🟡 This week</div>
+        <div id="followups-soon"></div>
+      </div>
+      <div id="followups-later-section">
+        <div class="fu-section-label fu-label-green">🟢 Coming up</div>
+        <div id="followups-later"></div>
+      </div>
+      <div id="followups-empty" class="empty-state" style="display:none;">
+        <div class="icon">✅</div>
+        <p>You're all caught up — no pending follow-ups.</p>
+      </div>
     </div>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Last Contact</th>
-            <th>Next Action</th>
-            <th>Status</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="contacts-table">
-        </tbody>
-      </table>
-      <div id="empty-state" class="empty-state">
-        <div class="icon">👋</div>
-        <p>No contacts yet — add someone you met recently.</p>
-      </div>
-    </div>
   </main>
 
 </div>
@@ -1027,6 +1183,60 @@ Keep it under 4 sentences. Casual and genuine, not salesy. No subject line. Just
     if (e.key === 'Enter') doLogin();
   });
 
+  // ─── TABS ───
+  let currentTab = 'contacts';
+
+  function showTab(tab) {
+    currentTab = tab;
+    document.getElementById('tab-contacts').style.display = tab === 'contacts' ? '' : 'none';
+    document.getElementById('tab-followups').style.display = tab === 'followups' ? '' : 'none';
+    document.getElementById('nav-contacts').classList.toggle('active', tab === 'contacts');
+    document.getElementById('nav-followups').classList.toggle('active', tab === 'followups');
+    if (tab === 'followups') renderFollowUps();
+    // close mobile sidebar
+    document.querySelector('.sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  }
+
+  function renderFollowUps() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const in7 = new Date(today); in7.setDate(today.getDate() + 7);
+    const in30 = new Date(today); in30.setDate(today.getDate() + 30);
+
+    const withDates = contacts.filter(c => c.next).sort((a, b) => new Date(a.next) - new Date(b.next));
+    const overdue = withDates.filter(c => new Date(c.next) < today);
+    const soon = withDates.filter(c => { const d = new Date(c.next); return d >= today && d <= in7; });
+    const later = withDates.filter(c => { const d = new Date(c.next); return d > in7 && d <= in30; });
+
+    function cardHTML(c) {
+      const days = Math.ceil((new Date(c.next) - today) / 86400000);
+      let badgeClass, badgeText;
+      if (days < 0) { badgeClass = 'fu-badge-red'; badgeText = `${Math.abs(days)}d overdue`; }
+      else if (days === 0) { badgeClass = 'fu-badge-amber'; badgeText = 'Today'; }
+      else if (days <= 7) { badgeClass = 'fu-badge-amber'; badgeText = `In ${days}d`; }
+      else { badgeClass = 'fu-badge-green'; badgeText = `In ${days}d`; }
+      return `
+        <div class="fu-card" onclick="window._openDetail('${c.id}')">
+          <div class="fu-avatar" style="background:${avatarColor(c.name)}">${initials(c.name)}</div>
+          <div class="fu-info">
+            <div class="fu-name">${c.name}</div>
+            <div class="fu-company">${c.company || c.type}</div>
+          </div>
+          <span class="fu-badge ${badgeClass}">${badgeText}</span>
+        </div>`;
+    }
+
+    const total = overdue.length + soon.length + later.length;
+    document.getElementById('followups-empty').style.display = total === 0 ? 'block' : 'none';
+    document.getElementById('followups-overdue-section').style.display = overdue.length ? '' : 'none';
+    document.getElementById('followups-soon-section').style.display = soon.length ? '' : 'none';
+    document.getElementById('followups-later-section').style.display = later.length ? '' : 'none';
+    document.getElementById('followups-overdue').innerHTML = overdue.map(cardHTML).join('');
+    document.getElementById('followups-soon').innerHTML = soon.map(cardHTML).join('');
+    document.getElementById('followups-later').innerHTML = later.map(cardHTML).join('');
+  }
+
   // expose to window for inline onclick handlers
   window._openDetail = openDetail;
   window._deleteContact = deleteContact;
@@ -1042,6 +1252,13 @@ Keep it under 4 sentences. Casual and genuine, not salesy. No subject line. Just
   window.doLogout = doLogout;
   window.editContact = editContact;
   window.toggleAuthMode = toggleAuthMode;
+  window.showTab = showTab;
+  window.toggleSidebar = function() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('open');
+  };
 
   // init
   checkSession();
