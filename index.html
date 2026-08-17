@@ -487,6 +487,33 @@
       margin-bottom: 16px;
       display: none;
     }
+
+    .login-success {
+      background: rgba(27,67,50,0.08);
+      border: 1px solid rgba(27,67,50,0.2);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #1B4332;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .login-toggle {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .login-toggle a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .login-toggle a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -495,8 +522,9 @@
 <div class="login-screen" id="login-screen">
   <div class="login-box">
     <div class="login-logo">Founder <span>CRM</span></div>
-    <div class="login-sub">Sign in to access your contacts</div>
+    <div class="login-sub" id="auth-sub">Sign in to access your contacts</div>
     <div class="login-error" id="login-error"></div>
+    <div class="login-success" id="login-success"></div>
     <div class="form-group">
       <label class="form-label">Email</label>
       <input class="form-input" id="login-email" type="email" placeholder="you@example.com" />
@@ -506,6 +534,10 @@
       <input class="form-input" id="login-password" type="password" placeholder="••••••••" />
     </div>
     <button class="btn btn-primary" id="login-btn" style="width:100%;margin-top:8px;justify-content:center;" onclick="window.doLogin()">Sign in</button>
+    <div class="login-toggle">
+      <span id="toggle-text">Don't have an account?</span>
+      <a onclick="window.toggleAuthMode()" id="toggle-link">Sign up</a>
+    </div>
   </div>
 </div>
 
@@ -670,15 +702,19 @@
 
   const SUPABASE_URL = 'https://rgqhispyzunahpyeweru.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJncWhpc3B5enVuYWhweWV3ZXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MjkwMTQsImV4cCI6MjEwMjUwNTAxNH0.vnWMxio4mwmgjb37Pwd39zAMyQD98fIiUC0Zk752L-c';
+  const GEMINI_KEY = 'AIzaSyAQ.Ab8RN6LZ-PkR4JgMk6RnWBoXHaTFYRrpT-MPncViH_Cc5Dx21Q';
   const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let contacts = [];
   let currentFilter = 'all';
   let currentDetailId = null;
   let editingId = null;
+  let authMode = 'login';
 
   async function loadContacts() {
-    const { data, error } = await db.from('contacts').select('*').order('created_at', { ascending: false });
+    const { data: { user } } = await db.auth.getUser();
+    if (!user) return;
+    const { data, error } = await db.from('contacts').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
     if (error) { console.error(error); return; }
     contacts = data.map(r => ({
       id: r.id,
@@ -815,6 +851,7 @@
     btn.textContent = 'Saving...';
     btn.disabled = true;
 
+    const { data: { user } } = await db.auth.getUser();
     const payload = {
       name,
       company: document.getElementById('f-company').value.trim() || null,
@@ -824,6 +861,7 @@
       notes: document.getElementById('f-notes').value.trim() || null,
       last_contacted: document.getElementById('f-last').value || null,
       follow_up_by: document.getElementById('f-next').value || null,
+      user_id: user.id,
     };
 
     let error;
@@ -878,16 +916,33 @@
     renderTable();
   }
 
-  function draftFollowUp() {
+  async function draftFollowUp() {
     const c = contacts.find(x => x.id === currentDetailId);
     if (!c) return;
-    const first = c.name.split(' ')[0];
-    const drafts = [
-      `Hey ${first}, great connecting${c.met ? ' at ' + c.met : ''}! ${c.notes ? 'Loved our chat about ' + c.notes.split(' ').slice(0,6).join(' ') + '...' : ''} Would love to continue the conversation — are you free for a quick call this week?`,
-      `Hi ${first}, just wanted to follow up on our last conversation. ${c.notes ? "I've been thinking about what you said regarding " + c.notes.split(' ').slice(0,5).join(' ') + '...' : 'A lot has happened since we last spoke!'} Would love to reconnect.`,
-      `${first} — hope you're doing well! Wanted to reach out and see how things are going. Happy to share some updates on what we're building too. Let me know if you're up for a quick chat.`,
-    ];
-    document.getElementById('d-draft-text').textContent = drafts[Math.floor(Math.random() * drafts.length)];
+
+    const btn = document.querySelector('.ai-btn');
+    btn.textContent = '✨ Drafting...';
+    btn.disabled = true;
+
+    const prompt = `Write a short, warm, natural follow-up message from a founder to ${c.name}${c.company ? ' at ' + c.company : ''}.
+They are a ${c.type || 'contact'}.${c.met ? ' They met at: ' + c.met + '.' : ''}${c.notes ? ' Notes from last conversation: ' + c.notes : ''}
+Keep it under 4 sentences. Casual and genuine, not salesy. No subject line. Just the message body.`;
+
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      });
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not generate message.';
+      document.getElementById('d-draft-text').textContent = text.trim();
+    } catch(e) {
+      document.getElementById('d-draft-text').textContent = 'Error generating message. Check your API key.';
+    }
+
+    btn.textContent = '✨ Draft follow-up message';
+    btn.disabled = false;
     document.getElementById('d-draft').style.display = 'block';
   }
 
@@ -912,18 +967,47 @@
     loadContacts();
   }
 
+  function toggleAuthMode() {
+    authMode = authMode === 'login' ? 'signup' : 'login';
+    const isSignup = authMode === 'signup';
+    document.getElementById('auth-sub').textContent = isSignup ? 'Create your free account' : 'Sign in to access your contacts';
+    document.getElementById('login-btn').textContent = isSignup ? 'Create account' : 'Sign in';
+    document.getElementById('toggle-text').textContent = isSignup ? 'Already have an account?' : "Don't have an account?";
+    document.getElementById('toggle-link').textContent = isSignup ? 'Sign in' : 'Sign up';
+    document.getElementById('login-error').style.display = 'none';
+    document.getElementById('login-success').style.display = 'none';
+  }
+
   async function doLogin() {
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
     const btn = document.getElementById('login-btn');
     const err = document.getElementById('login-error');
+    const success = document.getElementById('login-success');
+
+    err.style.display = 'none';
+    success.style.display = 'none';
+
+    if (authMode === 'signup') {
+      btn.textContent = 'Creating account...';
+      btn.disabled = true;
+      const { error } = await db.auth.signUp({ email, password });
+      btn.textContent = 'Create account';
+      btn.disabled = false;
+      if (error) {
+        err.textContent = error.message;
+        err.style.display = 'block';
+      } else {
+        success.textContent = 'Account created! Check your email to confirm, then sign in.';
+        success.style.display = 'block';
+        toggleAuthMode();
+      }
+      return;
+    }
 
     btn.textContent = 'Signing in...';
     btn.disabled = true;
-    err.style.display = 'none';
-
     const { error } = await db.auth.signInWithPassword({ email, password });
-
     btn.textContent = 'Sign in';
     btn.disabled = false;
 
@@ -940,7 +1024,6 @@
     showLogin();
   }
 
-  // handle Enter key on login
   document.getElementById('login-password').addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
   });
@@ -959,6 +1042,7 @@
   window.doLogin = doLogin;
   window.doLogout = doLogout;
   window.editContact = editContact;
+  window.toggleAuthMode = toggleAuthMode;
 
   // init
   checkSession();
