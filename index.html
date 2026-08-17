@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Founder CRM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F5F4F0;
+      --surface: #FFFFFF;
+      --border: rgba(17,17,17,0.10);
+      --text: #111111;
+      --muted: rgba(17,17,17,0.42);
+      --accent: #1B4332;
+      --accent-hover: #153728;
+      --lime: #CEFF1A;
+      --green: #1B4332;
+      --amber: #d97706;
+      --red: #dc2626;
+      --sans: 'Inter', -apple-system, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── LAYOUT ─── */
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    .sidebar {
+      width: 220px;
+      background: var(--accent);
+      border-right: none;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 16px;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 32px;
+      padding: 0 8px;
+      color: #fff;
+    }
+
+    .logo span { color: var(--lime); }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: rgba(255,255,255,0.55);
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s;
+      margin-bottom: 2px;
+    }
+
+    .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+    .nav-item.active { background: var(--lime); color: var(--accent) !important; font-weight: 600; }
+
+    .nav-icon { font-size: 15px; }
+
+    .sidebar-bottom { margin-top: auto; }
+
+    .stats-pill {
+      background: rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.55);
+    }
+
+    .stats-pill strong { color: var(--lime); font-size: 20px; display: block; margin-bottom: 2px; }
+
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px;
+    }
+
+    /* ─── HEADER ─── */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .page-title { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+    .page-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: var(--sans);
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+    }
+
+    .btn-primary { background: var(--accent); color: var(--lime); }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: rgba(17,17,17,0.3); }
+
+    /* ─── SEARCH + FILTER ─── */
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+
+    .search-wrap { position: relative; flex: 1; max-width: 320px; }
+
+    .search-wrap input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px 8px 34px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: var(--sans);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .search-wrap input:focus { border-color: var(--accent); }
+    .search-wrap input::placeholder { color: var(--muted); }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .filter-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 12px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-btn.active { background: var(--lime); border-color: var(--lime); color: var(--accent); font-weight: 600; }
+
+    /* ─── TABLE ─── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead tr { border-bottom: 1px solid var(--border); }
+
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+      cursor: pointer;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(99,102,241,0.04); }
+
+    td { padding: 14px 16px; vertical-align: middle; }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .contact-cell { display: flex; align-items: center; gap: 10px; }
+    .contact-name { font-weight: 500; font-size: 13px; }
+    .contact-company { font-size: 12px; color: var(--muted); }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .tag-investor { background: rgba(27,67,50,0.10); color: #1B4332; }
+    .tag-founder { background: rgba(206,255,26,0.25); color: #4a6a00; }
+    .tag-customer { background: rgba(217,119,6,0.12); color: #92400e; }
+    .tag-partner { background: rgba(220,38,38,0.10); color: #991b1b; }
+    .tag-advisor { background: rgba(17,17,17,0.07); color: #374151; }
+
+    .status-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green { background: #16a34a; }
+    .dot-amber { background: #d97706; }
+    .dot-red { background: #dc2626; }
+
+    .action-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 4px;
+      font-size: 15px;
+      transition: all 0.15s;
+    }
+
+    .action-btn:hover { background: var(--border); color: var(--text); }
+
+    /* ─── MODAL ─── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(2px);
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 480px;
+      padding: 28px;
+      animation: slideUp 0.2s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(16px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .modal-title { font-size: 16px; font-weight: 600; }
+
+    .close-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px;
+    }
+
+    .close-btn:hover { color: var(--text); }
+
+    .form-group { margin-bottom: 16px; }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 12px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: var(--sans);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(27,67,50,0.08); }
+    .form-textarea { resize: vertical; min-height: 80px; }
+    .form-select option { background: var(--surface); }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+
+    /* ─── DETAIL PANEL ─── */
+    .detail-panel {
+      position: fixed;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 380px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      box-shadow: -4px 0 24px rgba(17,17,17,0.06);
+      z-index: 40;
+      padding: 28px;
+      overflow-y: auto;
+      transform: translateX(100%);
+      transition: transform 0.25s ease;
+    }
+
+    .detail-panel.open { transform: translateX(0); }
+
+    .detail-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+
+    .detail-name { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+    .detail-meta { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+    .detail-section { margin-bottom: 24px; }
+    .detail-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .detail-field { margin-bottom: 12px; }
+    .detail-field-label { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+    .detail-field-value { font-size: 13px; }
+
+    .note-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .ai-btn {
+      width: 100%;
+      background: var(--lime);
+      border: none;
+      border-radius: 6px;
+      padding: 10px;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--sans);
+      cursor: pointer;
+      margin-top: 16px;
+      transition: opacity 0.15s;
+    }
+
+    .ai-btn:hover { opacity: 0.85; }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--muted);
+    }
+
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main { padding: 16px; }
+      .detail-panel { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">Founder <span>CRM</span></div>
+    <nav>
+      <div class="nav-item active"><span class="nav-icon">👥</span> Contacts</div>
+      <div class="nav-item"><span class="nav-icon">📅</span> Follow-ups</div>
+      <div class="nav-item"><span class="nav-icon">🏢</span> Companies</div>
+      <div class="nav-item"><span class="nav-icon">📝</span> Notes</div>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="stats-pill">
+        <strong id="contact-count">0</strong>
+        contacts tracked
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Contacts</div>
+        <div class="page-sub">Track everyone that matters to your journey</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModal()">+ Add Contact</button>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Search contacts..." oninput="filterContacts()" />
+      </div>
+      <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+      <button class="filter-btn" onclick="setFilter('investor', this)">Investors</button>
+      <button class="filter-btn" onclick="setFilter('founder', this)">Founders</button>
+      <button class="filter-btn" onclick="setFilter('customer', this)">Customers</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Last Contact</th>
+            <th>Next Action</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="contacts-table">
+        </tbody>
+      </table>
+      <div id="empty-state" class="empty-state">
+        <div class="icon">👋</div>
+        <p>No contacts yet — add someone you met recently.</p>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<!-- ADD CONTACT MODAL -->
+<div class="overlay" id="modal-overlay" onclick="closeModalOnOverlay(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Contact</div>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Name *</label>
+        <input class="form-input" id="f-name" placeholder="Rohan Mehta" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Company</label>
+        <input class="form-input" id="f-company" placeholder="Acme Inc." />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" id="f-email" type="email" placeholder="rohan@acme.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Type</label>
+        <select class="form-select" id="f-type">
+          <option value="founder">Founder</option>
+          <option value="investor">Investor</option>
+          <option value="customer">Customer</option>
+          <option value="partner">Partner</option>
+          <option value="advisor">Advisor</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">How you met</label>
+      <input class="form-input" id="f-met" placeholder="YC Demo Day, Twitter, intro from..." />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes from last conversation</label>
+      <textarea class="form-textarea" id="f-notes" placeholder="What did you talk about? What matters to them?"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Last contacted</label>
+        <input class="form-input" id="f-last" type="date" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Follow up by</label>
+        <input class="form-input" id="f-next" type="date" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveContact()">Save Contact</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="detail-panel" id="detail-panel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+    <span style="font-size:13px;font-weight:500;color:var(--muted);">Contact detail</span>
+    <button class="close-btn" onclick="closeDetail()">×</button>
+  </div>
+  <div class="detail-avatar" id="d-avatar"></div>
+  <div class="detail-name" id="d-name"></div>
+  <div class="detail-meta" id="d-meta"></div>
+
+  <div class="detail-section">
+    <div class="detail-section-title">Info</div>
+    <div class="detail-field"><div class="detail-field-label">Email</div><div class="detail-field-value" id="d-email">—</div></div>
+    <div class="detail-field"><div class="detail-field-label">How you met</div><div class="detail-field-value" id="d-met">—</div></div>
+    <div class="detail-field"><div class="detail-field-label">Last contacted</div><div class="detail-field-value" id="d-last">—</div></div>
+    <div class="detail-field"><div class="detail-field-label">Follow up by</div><div class="detail-field-value" id="d-next">—</div></div>
+  </div>
+
+  <div class="detail-section">
+    <div class="detail-section-title">Notes</div>
+    <div class="note-box" id="d-notes">No notes yet.</div>
+  </div>
+
+  <button class="ai-btn" onclick="draftFollowUp()">✨ Draft follow-up message</button>
+  <div id="d-draft" style="margin-top:14px;display:none;">
+    <div class="detail-section-title" style="margin-bottom:8px;">Suggested message</div>
+    <div class="note-box" id="d-draft-text" style="line-height:1.7;"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+  const SUPABASE_URL = 'https://rgqhispyzunahpyeweru.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJncWhpc3B5enVuYWhweWV3ZXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MjkwMTQsImV4cCI6MjEwMjUwNTAxNH0.vnWMxio4mwmgjb37Pwd39zAMyQD98fIiUC0Zk752L-c';
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let contacts = [];
+  let currentFilter = 'all';
+  let currentDetailId = null;
+
+  async function loadContacts() {
+    const { data, error } = await db.from('contacts').select('*').order('created_at', { ascending: false });
+    if (error) { console.error(error); return; }
+    contacts = data.map(r => ({
+      id: r.id,
+      name: r.name,
+      company: r.company,
+      email: r.email,
+      type: r.type,
+      met: r.met,
+      notes: r.notes,
+      last: r.last_contacted,
+      next: r.follow_up_by,
+    }));
+    renderTable();
+    document.getElementById('contact-count').textContent = contacts.length;
+  }
+
+  function initials(name) {
+    return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  function avatarColor(name) {
+    const colors = ['#1B4332','#2d6a4f','#40916c','#1a3a2a','#153728','#0d2b20','#245c3d'];
+    let h = 0;
+    for (let c of name) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
+    return colors[h % colors.length];
+  }
+
+  function formatDate(d) {
+    if (!d) return '—';
+    const dt = new Date(d + 'T00:00:00');
+    return dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function daysUntil(d) {
+    if (!d) return null;
+    return Math.ceil((new Date(d) - new Date()) / 86400000);
+  }
+
+  function statusFor(contact) {
+    const days = daysUntil(contact.next);
+    if (days === null) return { dot: 'dot-green', label: 'No follow-up' };
+    if (days < 0) return { dot: 'dot-red', label: 'Overdue' };
+    if (days <= 3) return { dot: 'dot-amber', label: `In ${days}d` };
+    return { dot: 'dot-green', label: `In ${days}d` };
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('contacts-table');
+    const empty = document.getElementById('empty-state');
+    const search = document.getElementById('search-input').value.toLowerCase();
+
+    const filtered = contacts.filter(c => {
+      const matchFilter = currentFilter === 'all' || c.type === currentFilter;
+      const matchSearch = !search || c.name.toLowerCase().includes(search) || (c.company || '').toLowerCase().includes(search);
+      return matchFilter && matchSearch;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+
+    empty.style.display = 'none';
+    tbody.innerHTML = filtered.map(c => {
+      const status = statusFor(c);
+      return `
+        <tr onclick="window._openDetail('${c.id}')">
+          <td>
+            <div class="contact-cell">
+              <div class="avatar" style="background:${avatarColor(c.name)}">${initials(c.name)}</div>
+              <div>
+                <div class="contact-name">${c.name}</div>
+                <div class="contact-company">${c.company || ''}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="tag tag-${c.type}">${c.type}</span></td>
+          <td style="color:var(--muted);font-size:13px;">${formatDate(c.last)}</td>
+          <td style="color:var(--muted);font-size:13px;">${formatDate(c.next)}</td>
+          <td><span class="status-dot"><span class="dot ${status.dot}"></span>${status.label}</span></td>
+          <td>
+            <button class="action-btn" onclick="event.stopPropagation();window._deleteContact('${c.id}')" title="Delete">🗑</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function openModal() {
+    document.getElementById('modal-overlay').classList.add('open');
+    document.getElementById('f-last').value = new Date().toISOString().split('T')[0];
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+    ['f-name','f-company','f-email','f-met','f-notes','f-last','f-next'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+  }
+
+  function closeModalOnOverlay(e) {
+    if (e.target === document.getElementById('modal-overlay')) closeModal();
+  }
+
+  async function saveContact() {
+    const name = document.getElementById('f-name').value.trim();
+    if (!name) { alert('Name is required'); return; }
+
+    const btn = document.querySelector('#modal-overlay .btn-primary');
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+
+    const { error } = await db.from('contacts').insert({
+      name,
+      company: document.getElementById('f-company').value.trim() || null,
+      email: document.getElementById('f-email').value.trim() || null,
+      type: document.getElementById('f-type').value,
+      met: document.getElementById('f-met').value.trim() || null,
+      notes: document.getElementById('f-notes').value.trim() || null,
+      last_contacted: document.getElementById('f-last').value || null,
+      follow_up_by: document.getElementById('f-next').value || null,
+    });
+
+    btn.textContent = 'Save Contact';
+    btn.disabled = false;
+
+    if (error) { alert('Error saving: ' + error.message); return; }
+    closeModal();
+    await loadContacts();
+  }
+
+  async function deleteContact(id) {
+    if (!confirm('Delete this contact?')) return;
+    await db.from('contacts').delete().eq('id', id);
+    if (currentDetailId === id) closeDetail();
+    await loadContacts();
+  }
+
+  function closeDetail() {
+    document.getElementById('detail-panel').classList.remove('open');
+    currentDetailId = null;
+  }
+
+  function openDetail(id) {
+    const c = contacts.find(x => x.id === id);
+    if (!c) return;
+    currentDetailId = id;
+    document.getElementById('d-avatar').textContent = initials(c.name);
+    document.getElementById('d-avatar').style.background = avatarColor(c.name);
+    document.getElementById('d-name').textContent = c.name;
+    document.getElementById('d-meta').textContent = [c.type, c.company].filter(Boolean).join(' · ');
+    document.getElementById('d-email').textContent = c.email || '—';
+    document.getElementById('d-met').textContent = c.met || '—';
+    document.getElementById('d-last').textContent = formatDate(c.last);
+    document.getElementById('d-next').textContent = formatDate(c.next);
+    document.getElementById('d-notes').textContent = c.notes || 'No notes yet.';
+    document.getElementById('d-draft').style.display = 'none';
+    document.getElementById('detail-panel').classList.add('open');
+  }
+
+  function setFilter(f, el) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    renderTable();
+  }
+
+  function draftFollowUp() {
+    const c = contacts.find(x => x.id === currentDetailId);
+    if (!c) return;
+    const first = c.name.split(' ')[0];
+    const drafts = [
+      `Hey ${first}, great connecting${c.met ? ' at ' + c.met : ''}! ${c.notes ? 'Loved our chat about ' + c.notes.split(' ').slice(0,6).join(' ') + '...' : ''} Would love to continue the conversation — are you free for a quick call this week?`,
+      `Hi ${first}, just wanted to follow up on our last conversation. ${c.notes ? "I've been thinking about what you said regarding " + c.notes.split(' ').slice(0,5).join(' ') + '...' : 'A lot has happened since we last spoke!'} Would love to reconnect.`,
+      `${first} — hope you're doing well! Wanted to reach out and see how things are going. Happy to share some updates on what we're building too. Let me know if you're up for a quick chat.`,
+    ];
+    document.getElementById('d-draft-text').textContent = drafts[Math.floor(Math.random() * drafts.length)];
+    document.getElementById('d-draft').style.display = 'block';
+  }
+
+  // expose to window for inline onclick handlers
+  window._openDetail = openDetail;
+  window._deleteContact = deleteContact;
+  window.openModal = openModal;
+  window.closeModal = closeModal;
+  window.closeModalOnOverlay = closeModalOnOverlay;
+  window.saveContact = saveContact;
+  window.closeDetail = closeDetail;
+  window.setFilter = setFilter;
+  window.filterContacts = () => renderTable();
+  window.draftFollowUp = draftFollowUp;
+
+  // init
+  loadContacts();
+</script>
+
+</body>
+</html>
