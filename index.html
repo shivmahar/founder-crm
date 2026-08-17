@@ -440,11 +440,76 @@
       .main { padding: 16px; }
       .detail-panel { width: 100%; }
     }
+
+    /* ─── LOGIN ─── */
+    .login-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    .login-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 4px 24px rgba(17,17,17,0.08);
+    }
+
+    .login-logo {
+      font-family: var(--sans);
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .login-logo span { color: var(--accent); }
+
+    .login-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 32px;
+    }
+
+    .login-error {
+      background: rgba(220,38,38,0.08);
+      border: 1px solid rgba(220,38,38,0.2);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #dc2626;
+      margin-bottom: 16px;
+      display: none;
+    }
   </style>
 </head>
 <body>
 
-<div class="app">
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">Founder <span>CRM</span></div>
+    <div class="login-sub">Sign in to access your contacts</div>
+    <div class="login-error" id="login-error"></div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-input" id="login-email" type="email" placeholder="you@example.com" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="login-password" type="password" placeholder="••••••••" />
+    </div>
+    <button class="btn btn-primary" id="login-btn" style="width:100%;margin-top:8px;justify-content:center;" onclick="window.doLogin()">Sign in</button>
+  </div>
+</div>
+
+<div class="app" id="main-app" style="display:none;">
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
@@ -460,6 +525,7 @@
         <strong id="contact-count">0</strong>
         contacts tracked
       </div>
+      <button onclick="window.doLogout()" style="margin-top:12px;width:100%;background:transparent;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:8px;color:rgba(255,255,255,0.45);font-size:12px;font-family:var(--sans);cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.45)'">Sign out</button>
     </div>
   </aside>
 
@@ -790,6 +856,60 @@
     document.getElementById('d-draft').style.display = 'block';
   }
 
+  // ─── AUTH ───
+  async function checkSession() {
+    const { data: { session } } = await db.auth.getSession();
+    if (session) {
+      showApp();
+    } else {
+      showLogin();
+    }
+  }
+
+  function showLogin() {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('main-app').style.display = 'none';
+  }
+
+  function showApp() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'flex';
+    loadContacts();
+  }
+
+  async function doLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const btn = document.getElementById('login-btn');
+    const err = document.getElementById('login-error');
+
+    btn.textContent = 'Signing in...';
+    btn.disabled = true;
+    err.style.display = 'none';
+
+    const { error } = await db.auth.signInWithPassword({ email, password });
+
+    btn.textContent = 'Sign in';
+    btn.disabled = false;
+
+    if (error) {
+      err.textContent = 'Invalid email or password.';
+      err.style.display = 'block';
+    } else {
+      showApp();
+    }
+  }
+
+  async function doLogout() {
+    await db.auth.signOut();
+    showLogin();
+  }
+
+  // handle Enter key on login
+  document.getElementById('login-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+
   // expose to window for inline onclick handlers
   window._openDetail = openDetail;
   window._deleteContact = deleteContact;
@@ -801,9 +921,11 @@
   window.setFilter = setFilter;
   window.filterContacts = () => renderTable();
   window.draftFollowUp = draftFollowUp;
+  window.doLogin = doLogin;
+  window.doLogout = doLogout;
 
   // init
-  loadContacts();
+  checkSession();
 </script>
 
 </body>
